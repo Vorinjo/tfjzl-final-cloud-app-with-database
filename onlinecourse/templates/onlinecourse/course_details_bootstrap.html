@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ course.name }} | OnlineCourse</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand navbar-light bg-white border-bottom mb-4">
+        <div class="container">
+            <a class="navbar-brand font-weight-bold" href="{% url 'onlinecourse:index' %}">OnlineCourse</a>
+            <div class="ml-auto">
+                {% if user.is_authenticated %}
+                    <span class="navbar-text mr-3">{{ user.first_name|default:user.username }}</span>
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'onlinecourse:logout' %}">Logout</a>
+                {% else %}
+                    <a class="btn btn-primary btn-sm" href="{% url 'onlinecourse:login' %}">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="container pb-5">
+        <div class="jumbotron bg-white border shadow-sm">
+            <h1 class="display-4">{{ course.name }}</h1>
+            <p class="lead mb-0">{{ course.description }}</p>
+        </div>
+
+        {% if user.is_authenticated and not course.is_enrolled %}
+            <a class="btn btn-primary mb-4" href="{% url 'onlinecourse:enroll' course.id %}">Enroll in this course</a>
+        {% endif %}
+
+        <form action="{% url 'onlinecourse:submit' course.id %}" method="post">
+            {% csrf_token %}
+            {% for lesson in course.lesson_set.all %}
+                <section class="card mb-4 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="h5 mb-0">Lesson {{ lesson.order|add:1 }}: {{ lesson.title }}</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ lesson.content }}</p>
+
+                        {% for question in lesson.question_set.all %}
+                            <div class="border rounded p-3 mt-4">
+                                <h3 class="h6">Question {{ forloop.counter }}: {{ question.question_text }}</h3>
+                                <p class="text-muted">{{ question.grade }} points</p>
+                                {% for choice in question.choice_set.all %}
+                                    <div class="form-check mb-2">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            name="choice_{{ choice.id }}"
+                                            id="choice_{{ choice.id }}"
+                                            value="{{ choice.id }}"
+                                        >
+                                        <label class="form-check-label" for="choice_{{ choice.id }}">
+                                            {{ choice.choice_text }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% empty %}
+                            <p class="text-muted mb-0">No exam questions are available for this lesson.</p>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% empty %}
+                <div class="alert alert-info">No lessons are available for this course.</div>
+            {% endfor %}
+
+            {% if user.is_authenticated and course.is_enrolled %}
+                <button class="btn btn-success btn-lg" type="submit">Submit Exam</button>
+            {% elif not user.is_authenticated %}
+                <div class="alert alert-warning">Please log in and enroll to take the exam.</div>
+            {% endif %}
+        </form>
+    </main>
+</body>
+</html>
